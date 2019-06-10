@@ -2743,7 +2743,7 @@ struct Mediator {
 }
 
 //Mediator.main()
-Mediator.Test.main()
+//Mediator.Test.main()
 
 // ******* END MEDIATOR ********
 
@@ -2751,5 +2751,1484 @@ Mediator.Test.main()
 
 // DEFINITION: A token/handle representing the system state. Let us roll back to the state when the token was generated. May or may not directly expose state information.
 
+struct Memento {
+    
+    class BankAccount : CustomStringConvertible {
+        
+        var description: String {
+            return "Balance - \(balance)"
+        }
+        
+        private var balance: Int
+        private var changes = [Memento]()
+        private var current = 0
+        
+        init(_ balance: Int) {
+            self.balance = balance
+            changes.append(Memento(balance))
+        }
+        
+        func deposit(_ amount: Int) -> Memento {
+            balance += amount
+            let m = Memento(balance)
+            changes.append(m)
+            current += 1
+            return m
+        }
+        
+        func undo() -> Memento? {
+            if current > 0 {
+                current -= 1
+                let m = changes[current]
+                balance = m.balance
+                return m
+            }
+            return nil
+        }
+        
+        func redo() -> Memento? {
+            if (current+1) < changes.count {
+                current += 1
+                let m = changes[current]
+                balance = m.balance
+                return m
+            }
+            return nil
+        }
+        
+        func restore(_ m: Memento?) {
+            if let mm = m {
+                balance = mm.balance
+                changes.append(mm)
+                current = changes.count-1
+            }
+        }
+        
+        class Memento {
+            let balance: Int
+            init(_ balance: Int) {
+                self.balance = balance
+            }
+        }
+    }
+    
+    static func main() {
+        let ba = BankAccount(100)
+        let m1 = ba.deposit(50)
+        let m2 = ba.deposit(25)
+        print(ba)
+        
+        ba.undo()
+        print("Undo 1: \(ba)")
+        ba.undo()
+        print("Undo 2: \(ba)")
+        ba.redo()
+        print("Redo 1: \(ba)")
+        
+    }
+    
+    // --- TEST ---
+    
+    struct Test {
+        /*
+         Memento Coding Exercise
+         You are given a class called TokenMachine which keeps tokens. Each token is a class with a single value. The TokenMachine actually has two members: one takes an integer and another takes an already-made token.
+         
+         Both overloads need to add its tokens to the set of tokens and return a Memento that allows us to subsequently call revert(to:) to roll the system back to the original state.
+         
+         Please implement the missing members.
+        */
+        
+        class Token
+        {
+            var value = 0
+            init(_ value: Int)
+            {
+                self.value = value
+            }
+            // todo: any extra members you need
+            
+            // please keep this operator! it will be
+            // used for testing!
+            static func ==(_ lhs: Token, _ rhs: Token) -> Bool
+            {
+                return lhs.value == rhs.value
+            }
+        }
+        
+        class Memento
+        {
+            var tokens = [Token]()
+            
+            init(_ tokens: [Token]) {
+                self.tokens = tokens
+            }
+        }
+        
+        class TokenMachine
+        {
+            var tokens = [Token]()
+            
+            private var changes = [Memento]()
+            private var current = 0
+            
+            func addToken(_ value: Int) -> Memento
+            {
+                let token = Token(value)
+                tokens.append(token)
+                let memento = Memento(tokens)
+                changes.append(memento)
+                current += 1
+                return memento
+            }
+            
+            func addToken(_ token: Token) -> Memento
+            {
+                tokens.append(token)
+                let memento = Memento(tokens)
+                changes.append(memento)
+                current += 1
+                return memento
+            }
+            
+            func revert(to m: Memento?)
+            {
+                if let memento = m {
+                    tokens = memento.tokens
+                    changes.append(memento)
+                    current = changes.count-1
+                }
+            }
+        }
+        
+        static func main() {
+            
+        }
+    }
+}
+
+//Memento.main()
+//Memento.Test.main()
 
 // **** END MEMENTO *****
+
+// ***** NULL OBJECT *****
+
+// DEFINITION: A no-op oject that conforms to the required ointerface, satisfying a dependency requirement of some other object.
+
+protocol NullObject_Log {
+    func info(_ msg: String)
+    func warn(_ msg: String)
+}
+
+struct NullObject {
+    
+    class ConsoleLog : NullObject_Log {
+        func info(_ msg: String) {
+            print(msg)
+        }
+        
+        func warn(_ msg: String) {
+            print("WARNING: \(msg)")
+        }
+    }
+    
+    class BankAccount {
+        var balance = 0
+        var log: NullObject_Log
+        
+        init(_ log: NullObject_Log) {
+            self.log = log
+        }
+        
+        func deposit(_ amount: Int) {
+            balance += amount
+            log.info("Deposited \(amount), balance is now \(balance)")
+        }
+    }
+    
+    class NullLog : NullObject_Log {
+        func info(_ msg: String) {}
+        func warn(_ msg: String) {}
+    }
+    
+    
+    static func main() {
+//        let log = ConsoleLog()
+        let log = NullLog()
+        let ba = BankAccount(log)
+        ba.deposit(100)
+    }
+    
+    // --- TEST ---
+    
+    /*
+     Null Object Coding Exercise
+     In this example, we have a class Account  that is very tightly coupled to the Log protocol... it also breaks SRP by performing all sorts of weird checks in someOperation() .
+     
+     Your mission, should you choose to accept it, is to implement a NullLog  class that can be fed into an Account  and that doesn't throw any exceptions, for virtually infinite repetitions.
+    */
+    
+    struct Test {
+        
+        
+        enum LogError : Error
+        {
+            case recordNotUpdated
+            case logSpaceExceeded
+        }
+        
+        class Account
+        {
+            private var log: Log
+            
+            init(_ log: Log)
+            {
+                self.log = log
+            }
+            
+            func someOperation() throws
+            {
+                let c = log.recordCount
+                log.logInfo("Performing an operation")
+                if (c+1) != log.recordCount
+                {
+                    throw LogError.recordNotUpdated
+                }
+                if log.recordCount >= log.recordLimit
+                {
+                    throw LogError.logSpaceExceeded
+                }
+            }
+        }
+        
+        class NullLog : Log
+        {
+            var recordLimit: Int = 2
+            
+            var recordCount: Int = 0
+            
+            func logInfo(_ message: String) {
+                print(message)
+                recordCount += 1
+                recordLimit += 1
+            }
+        }
+        
+        static func main() {
+            let nL = NullLog()
+            let a = Account(nL)
+            for _ in 0...10 {
+                do {
+                    try a.someOperation()
+                } catch {
+                    print(error)
+                }
+            }
+        }
+    }
+    
+}
+
+protocol Log
+{
+    var recordLimit: Int { get }
+    var recordCount: Int { get set }
+    func logInfo(_ message: String)
+}
+
+//NullObject.Test.main()
+
+// *** END NULL OBJECT ****
+
+// ******* OBSERVER *******
+
+// DEFINITION: An observer is an object that wishes to be informed about events happening in the system. The entity generating the events is an 'observable'
+
+protocol Observer_Invocable : class {
+    func invoke(_ data: Any)
+}
+
+protocol Observer_Disposable {
+    func dispose()
+}
+
+struct Observer {
+    
+    class Person {
+        
+        // event
+        let fallsIll = Event<String>()
+        
+        init(){}
+        
+        func catchCold() {
+            fallsIll.raise("123 London Road")
+        }
+    }
+    
+    class Demo {
+        init() {
+            let p = Person()
+            let sub = p.fallsIll.addHandler(
+                target: self, handler: Demo.callDoctor
+            )
+            
+            p.catchCold()
+            
+            sub.dispose()
+            
+            p.catchCold()
+        }
+        func callDoctor(address: String) {
+            print("We need a doctor at \(address)")
+        }
+    }
+    
+    static func main() {
+        let _ = Demo()
+    }
+    
+    class Event<T> {
+        typealias EventHandler = (T) -> ()
+        var eventHandlers = [Observer_Invocable]()
+        
+        func raise(_ data: T) {
+            for handler in eventHandlers {
+                handler.invoke(data)
+            }
+        }
+        
+        func addHandler<U: AnyObject>(
+            target: U,
+            handler: @escaping (U) -> EventHandler) -> Observer_Disposable {
+            let subscription = Subscription(target: target, handler: handler, event: self)
+            eventHandlers.append(subscription)
+            return subscription
+        }
+    }
+    
+    class Subscription<T: AnyObject, U> : Observer_Invocable, Observer_Disposable {
+        weak var target: T?
+        let handler: (T) -> (U) -> ()
+        let event: Event<U>
+        
+        init(target: T?, handler: @escaping (T) -> (U) -> (), event: Event<U>) {
+            self.target = target; self.event = event; self.handler = handler
+        }
+        
+        func invoke(_ data: Any) {
+            if let t = target {
+                handler(t)(data as! U)
+            }
+        }
+        
+        func dispose() {
+            event.eventHandlers = event.eventHandlers.filter
+                { $0 as AnyObject? !== self }
+        }
+    }
+    
+    // --- Example 2 ---
+    
+    struct PropertyObserver {
+        
+        class Person {
+            var age: Int = 0 {
+                willSet(newValue) {
+                    print("About to set age to \(newValue)")
+                }
+                didSet {
+                    print("we just changed age from \(oldValue) to \(age)")
+                }
+            }
+        }
+        
+        class Demo {
+            
+            init(){
+                let p = Person()
+                p.age = 20
+                p.age = 22
+            }
+        }
+        
+        static func main() {
+            let _ = Demo()
+        }
+    }
+    
+    struct DependentPropertyObserver {
+        
+        class Person {
+            private var oldCanVote = false
+            var age: Int = 0 {
+                willSet(newValue) {
+                    print("About to set age to \(newValue)")
+                    oldCanVote = canVote
+                }
+                didSet {
+                    print("we just changed age from \(oldValue) to \(age)")
+                    
+                    if age != oldValue {
+                        propertyChanged.raise(("age", age))
+                    }
+                    if canVote != oldCanVote {
+                        propertyChanged.raise(("canVote", canVote))
+                    }
+                }
+            }
+            
+            var canVote : Bool {
+                return age >= 16
+            }
+            
+            let propertyChanged = Event<(String, Any)>()
+        }
+        
+        class Person2 {
+            private var _age: Int = 0
+            
+            var age: Int {
+                get { return _age }
+                set(value) {
+                    if _age == value { return }
+                    
+                    // cache
+                    let oldCanvote = canVote
+                    
+                    let cancelSet = RefBool(false)
+                    propertyChanging.raise(("age", value, cancelSet))
+                    if cancelSet.value { return }
+                    
+                    // assigne & notify
+                    _age = value
+                    propertyChanged.raise(("age", _age))
+                    if oldCanvote != canVote { propertyChanged.raise(("canVote",canVote)) }
+                }
+            }
+            
+            var canVote: Bool { return age >= 16 }
+            
+            let propertyChanged = Event<(String, Any)>()
+            let propertyChanging = Event<(String, Any, RefBool)>()
+        }
+        
+        final class RefBool {
+            var value: Bool
+            init(_ value: Bool) {
+                self.value = value
+            }
+        }
+        
+        class Demo {
+            
+            init(){
+                let p = Person2()
+                p.propertyChanged.addHandler(target: self, handler: Demo.propChanged)
+                p.propertyChanging.addHandler(target: self, handler: Demo.propChanging)
+                p.age = 20
+                p.age = 22
+                
+                p.age = 12
+            }
+            
+            func propChanged(args: (String, Any)) {
+                var prependedString = ""
+                switch args.0 {
+                case "age": prependedString = "Person's age"
+                case "canVote": prependedString = "Voting status"
+                default: break
+                }
+                print("\(prependedString) has changed to \(args.1)")
+            }
+            
+            func propChanging(args: (String, Any, RefBool)) {
+                if args.0 == "age" && (args.1 as! Int) < 14 {
+                    print("Cannot allow setting age < 14")
+                    args.2.value = true
+                }
+            }
+        }
+        
+        static func main() {
+            let _ = Demo()
+        }
+    }
+    
+    // --- TEST ---
+    // INCOMPLETE!!!
+    struct Test {
+        
+        /*
+         Observer Coding Exercise
+         Imagine a game where one or more rats can attack a player. Each individual rat has an attack  value of 1. However, rats attack as a swarm, so each rat's attack  value is equal to the total number of rats in play.
+         
+         Given that a rat enters play through the constructor and leaves play (dies) via its kill()  method (rat murder is satisfying!), please implement the Game  and Rat  classes so that, at any point in the game, the attack  value of a rat is always consistent.
+         
+         This exercise has two simple rules:
+         
+         The Game class cannot contain properties. It can only contain events and methods.
+         The Rat class' attack property is strictly defined as var attack = 1 , i.e. it doesn't have a custom getter or setter.
+        */
+        
+        class Event<T> {
+            typealias EventHandler = (T) -> ()
+            var eventHandlers = [Observer_Invocable]()
+            
+            func raise(_ data: T) {
+                for handler in eventHandlers {
+                    handler.invoke(data)
+                }
+            }
+            
+            func addHandler<U: AnyObject>(
+                target: U,
+                handler: @escaping (U) -> EventHandler) -> Observer_Disposable {
+                let subscription = Subscription(target: target, handler: handler, event: self)
+                eventHandlers.append(subscription)
+                return subscription
+            }
+        }
+        
+        class Subscription<T: AnyObject, U> : Observer_Invocable, Observer_Disposable {
+            weak var target: T?
+            let handler: (T) -> (U) -> ()
+            let event: Event<U>
+            
+            init(target: T?, handler: @escaping (T) -> (U) -> (), event: Event<U>) {
+                self.target = target; self.event = event; self.handler = handler
+            }
+            
+            func invoke(_ data: Any) {
+                if let t = target {
+                    handler(t)(data as! U)
+                }
+            }
+            
+            func dispose() {
+                event.eventHandlers = event.eventHandlers.filter
+                    { $0 as AnyObject? !== self }
+            }
+        }
+        
+        class Game
+        {
+            // todo - Will likely need a method/notification to fire whenever a new Rat instance is created, to update RatAttackModifier packCount
+            
+            func ratJoinedPack(_ rat: Rat) {
+                // Pass in rat as variable, and
+                // Set listener for Rat so when a new rat joins previous Rat(s) are notified
+                // Set listener for Rat to respond when other rats announce packCount
+                // Fire Notification 'New Rat has joined"
+                RatAttackModifier.ratPackChangedAttack.addHandler(target: self, handler: Game.updatePackAttack)
+                RatAttackModifier.addRatToPack(rat)
+            }
+            
+            func ratLeftPack(_ rat: Rat) {
+                RatAttackModifier.ratWasKilled.addHandler(target: self, handler: Game.resetKilledRat)
+                RatAttackModifier.removeRatFromPack(rat)
+            }
+            
+            func updatePackAttack(_ attackValue: Int) {
+                // Pass in pack count as Int
+                // Fire Notification
+                RatAttackModifier.updatePackAttack(attackValue)
+            }
+            
+            func resetKilledRat(rat: Rat) {
+                rat.resetAttack()
+            }
+        }
+        
+        class Rat : CustomStringConvertible, Equatable
+        {
+            static func == (lhs: Observer.Test.Rat, rhs: Observer.Test.Rat) -> Bool {
+                return lhs.id == rhs.id
+            }
+            
+            /*
+             Publishes events to Game object when rats enter/leave the Game
+            */
+            private let game: Game
+            var attack = 1
+            var id = 0
+            
+            var description: String {
+                return "My attack is \(attack)"
+            }
+            
+            let ratPackChanged = Event<Int>()
+            
+            init(_ game: Game)
+            {
+                /*
+                 Inform Game existence of new Rat, and subscribe to RAM events
+                */
+                self.game = game
+                self.game.ratJoinedPack(self)
+            }
+            
+            func kill() {
+                /*
+                 Inform Game of desistance of specific Rat, and unsubscribe to RAM events?
+                */
+                game.ratLeftPack(self)
+            }
+            
+            func resetAttack() {
+                attack = 1
+            }
+        }
+        
+        /*
+         Class with static reference to Array of current Rats in Game, and tracks count
+         Fires events to notify member rats to update attack values
+        */
+        class RatAttackModifier : NSObject {
+            private static var ratPack = [Rat]()
+            private static var packCount : Int {
+                /*
+                 1. Listens for updates from Game as new Rat created, and increases packCount
+                 2. Triggers 'packCountNotification' back to the Game
+                 3. value will increase
+
+                 */
+                return ratPack.count
+            }
+
+            static let ratPackChangedAttack = Event<Int>()
+            static let ratWasKilled = Event<Rat>()
+//            static let propertyChanging = Event<(String, Any, RefBool)>()
+
+            static func addRatToPack(_ rat: Rat) {
+                rat.id = ratPack.count
+                self.ratPack.append(rat)
+                ratPackChangedAttack.raise(packCount)
+            }
+
+            static func removeRatFromPack(_ rat: Rat) {
+                self.ratPack.remove(at: ratPack.index(of: rat) ?? 0)
+                ratWasKilled.raise(rat)
+                ratPackChangedAttack.raise(packCount)
+            }
+
+            static func updatePackAttack(_ value: Int) {
+                for rat in ratPack {
+                    rat.attack = value
+                }
+            }
+        }
+        
+        static func main() {
+            /*
+             As new rat instances are created, each individual rat's attack value should increase to match total rat instances (packCount), included the newest rat instance created
+            */
+            let g = Game()
+            let r1 = Rat(g)
+            print("Rat1: \(r1)")
+            let r2 = Rat(g)
+            print("Rat1: \(r1) after Rat2")
+            print("Rat2: \(r2)")
+            let g2 = Game()
+            let r3 = Rat(g2) // FAILURE: No accounting for a separately initialized Game -- can't do g == g2
+            print("Before Kill -- Rat3: \(r3)\nRat2: \(r2)\nRat1: \(r1)")
+            r1.kill()
+            print("After Kill -- Rat3: \(r3)\nRat2: \(r2)\nRat1: \(r1)")
+        }
+    }
+}
+
+//Observer.main()
+//Observer.PropertyObserver.main()
+//Observer.DependentPropertyObserver.main()
+Observer.Test.main()
+
+
+// ***** END OBSERVER **********
+
+// ******** STATE *********
+
+// DEFINITION: A pattern in which the object's behavior is determined by its state. An object transitions from one state to another (something needs to trigger a transition). A formalized contstruct which manages state and transitions is called a *state machine*.
+
+
+struct State {
+    
+    enum State {
+        case offHook, connecting, connected, onHold
+    }
+    
+    enum Trigger {
+        case callDialed, hungUp, callConnected, placedOnHold, takenOffHold, leftMessage
+    }
+    
+    let rules = [
+        State.offHook : [
+            (Trigger.callDialed, State.connecting)
+        ],
+        State.connecting: [
+            (Trigger.hungUp, State.offHook),
+            (Trigger.callConnected, State.connected)
+        ],
+        State.connected: [
+            (Trigger.leftMessage, State.offHook),
+            (Trigger.hungUp, State.offHook),
+            (Trigger.placedOnHold, State.onHold)
+        ],
+        State.onHold: [
+            (Trigger.takenOffHold, State.connected),
+            (Trigger.hungUp, State.offHook)
+        ]
+    ]
+    func main() {
+        var state = State.offHook
+        
+        while true {
+            print("The phone is currently \(state)")
+            print("Select a trigger:")
+            
+            for i in 0..<rules[state]!.count {
+                let (t, _) = rules[state]![i]
+                print("\(i), \(t)")
+            }
+            
+            if let input = Int(readLine()!) {
+                let (_, s) = rules[state]![input]
+                state = s
+            }
+        }
+    }
+    
+    
+    struct Test {
+        
+        
+        static func main() {
+            
+        }
+    }
+}
+
+//State().main()
+
+// ****** END STATE ******
+
+// ****** STRATEGY ********
+
+// DEFINITION: Enables the exact behavior of a system to be selected either at run-time (dynamic) or compile-time (static). Also known as a 'policy' (esp. in the C++ world).
+protocol ListStrategy {
+    
+    init()
+    func start(_ buffer: inout String)
+    func end(_ buffer: inout String)
+    func addListItem(buffer: inout String, item: String)
+}
+
+struct Strategy {
+    
+    // --- Dynamic Strategy
+    
+    struct DynamicStrategy {
+        enum OutputFormat {
+            case markdown
+            case html
+        }
+        
+        class TextProcessor : CustomStringConvertible {
+            
+            private var buffer = ""
+            private var listStrategy: ListStrategy
+            var description: String { return buffer }
+            
+            init(_ outputFormat: OutputFormat) {
+                switch outputFormat {
+                case .markdown:
+                    listStrategy = MarkdownListStrategy()
+                case .html:
+                    listStrategy = HtmlListStrategy()
+                }
+            }
+            
+            func setOutputFormat(_ outputFormat: OutputFormat) {
+                switch outputFormat {
+                case .markdown:
+                    listStrategy = MarkdownListStrategy()
+                case .html:
+                    listStrategy = HtmlListStrategy()
+                }
+            }
+            
+            func appendList(_ items: [String]) {
+                listStrategy.start(&buffer)
+                for item in items {
+                    listStrategy.addListItem(buffer: &buffer, item: item)
+                }
+                listStrategy.end(&buffer)
+            }
+            
+            func clear() {
+                buffer = ""
+            }
+        }
+        
+        class MarkdownListStrategy: ListStrategy {
+            required init() {}
+            func start(_ buffer: inout String) {
+            
+            }
+            func end(_ buffer: inout String) {
+                
+            }
+            func addListItem(buffer: inout String, item: String) {
+                buffer.append(" * \(item)\n")
+            }
+        }
+        
+        class HtmlListStrategy: ListStrategy {
+            required init() {}
+            func start(_ buffer: inout String) {
+                buffer.append("<ul>\n")
+            }
+            func end(_ buffer: inout String) {
+                buffer.append("</ul>\n")
+            }
+            func addListItem(buffer: inout String, item: String) {
+                buffer.append("  <li>\(item)</li>\n")
+            }
+        }
+        
+        static func main() {
+            let tp = TextProcessor(.markdown)
+            tp.appendList(["foo","bar", "baz"])
+            print(tp)
+            
+            tp.clear()
+            tp.setOutputFormat(.html)
+            tp.appendList(["foo","bar", "baz"])
+            print(tp)
+        }
+    }
+    // --- End Dynamic Strategy
+    
+    struct StaticStrategy {
+        
+        enum OutputFormat {
+            case markdown
+            case html
+        }
+        
+        class TextProcessor<LS> : CustomStringConvertible where LS: ListStrategy {
+            
+            private var buffer = ""
+            private var listStrategy = LS()
+            var description: String { return buffer }
+            
+            func appendList(_ items: [String]) {
+                listStrategy.start(&buffer)
+                for item in items {
+                    listStrategy.addListItem(buffer: &buffer, item: item)
+                }
+                listStrategy.end(&buffer)
+            }
+            
+            func clear() {
+                buffer = ""
+            }
+        }
+        
+        class MarkdownListStrategy: ListStrategy {
+            required init() {}
+            func start(_ buffer: inout String) {
+                
+            }
+            func end(_ buffer: inout String) {
+                
+            }
+            func addListItem(buffer: inout String, item: String) {
+                buffer.append(" * \(item)\n")
+            }
+        }
+        
+        class HtmlListStrategy: ListStrategy {
+            required init() {}
+            func start(_ buffer: inout String) {
+                buffer.append("<ul>\n")
+            }
+            func end(_ buffer: inout String) {
+                buffer.append("</ul>\n")
+            }
+            func addListItem(buffer: inout String, item: String) {
+                buffer.append("  <li>\(item)</li>\n")
+            }
+        }
+        static func main() {
+            let tp = TextProcessor<MarkdownListStrategy>()
+            tp.appendList(["foo","bar", "baz"])
+            print(tp)
+            
+            let tp2 = TextProcessor<HtmlListStrategy>()
+            tp2.appendList(["foo","bar", "baz"])
+            print(tp2)
+        }
+    }
+    // --- End Static Strategy
+    
+    
+    
+    // --- Test ---
+    
+    struct Test {
+        
+        /*
+         
+         
+         Strategy Coding Exercise
+         Consider the quadratic equation and its canonical solution:
+         
+         
+         
+         The part b^2-4*a*c is called the discriminant. Suppose we want to provide an API with two different strategies for calculating the discriminant:
+         
+         In OrdinaryDiscriminantStrategy , If the discriminant is negative, we simply return the discriminant as-is.
+         In RealDiscriminantStrategy , if the discriminant is negative, the return value is NaN (not a number). NaN propagates throughout the calculation, so the equation solver gives two NaN values.
+         Please implement both of these strategies as well as the equation solver itself. With regards to plus-minus in the formula, please return the + result as the first element and - as the second.
+        */
+        
+        class OrdinaryDiscriminantStrategy : DiscriminantStrategy
+        {
+            // todo
+            func calculateDiscriminant(_ a: Double, _ b: Double, _ c
+                : Double) -> Double {
+                
+                return 0.0
+            }
+        }
+        class RealDiscriminantStrategy : DiscriminantStrategy
+        {
+            // todo
+            func calculateDiscriminant(_ a: Double, _ b: Double, _ c
+                : Double) -> Double {
+                
+                return 0.0
+            }
+        }
+        static func main() {
+            
+        }
+    }
+}
+
+protocol DiscriminantStrategy
+{
+    func calculateDiscriminant(_ a: Double, _ b: Double, _ c
+        : Double) -> Double
+}
+//Strategy.DynamicStrategy.main()
+//Strategy.StaticStrategy.main()
+
+// ***** END STRATEGY ******
+
+// ***** TEMPLATE METHOD ******
+
+// DEFINITION: Allows us to define the 'skeleton' of the algorithm, with concrete implementations defined in subclasses
+
+struct TemplateMethod {
+    
+    class Game {
+        func run() {
+            start()
+            while !haveWinner {
+                takeTurn()
+            }
+            print("Player \(winningPlayer) wins!")
+        }
+        
+        internal func start() {
+            precondition(false, "this method needs to be overridden")
+        }
+        
+        internal func takeTurn() {
+            precondition(false, "this method needs to be overridden")
+        }
+        
+        internal var winningPlayer: Int {
+            get {
+                precondition(false, "this method needs to be overridden")
+            }
+        }
+        
+        internal var haveWinner: Bool {
+            get {
+                precondition(false, "this method needs to be overridden")
+            }
+        }
+        
+        internal var currentPlayer = 0
+        internal let numberOfPlayers: Int
+        
+        init(_ numberOfPlayers: Int) {
+            self.numberOfPlayers = numberOfPlayers
+        }
+    }
+    
+    class Chess : Game {
+        private let maxTurns = 10
+        private var turn = 1
+        
+        init() {
+            super.init(2)
+        }
+        
+        override func start() {
+            print("Starting a game of chess with \(numberOfPlayers) players.")
+        }
+        
+        override var haveWinner: Bool {
+            return turn == maxTurns
+        }
+        
+        override func takeTurn() {
+            print("Turn \(turn) taken by player \(currentPlayer).")
+            currentPlayer = (currentPlayer + 1) % numberOfPlayers
+            turn += 1
+        }
+        
+        override var winningPlayer: Int {
+            return currentPlayer
+        }
+    }
+    
+    static func main() {
+        let chess = Chess()
+        chess.run()
+    }
+    
+    // --- TEST ---
+    // --- INCOMPLETE!!!
+    struct Test {
+        
+        /*
+         -- Template Method Coding Exercise --
+         
+         Imagine a typical collectible card game which has cards representing creatures. Each creature has two properties: attack  and health . Creatures can fight each other, dealing their attack  damage, thereby reducing their opponent's health .
+         
+         The class CardGame implements the logic for two creatures fighting one another. However, the exact mechanics of how damage is dealt is different:
+         
+         TemporaryCardDamage : In some games (e.g., Magic: the Gathering), unless the creature has been killed, its health returns to the original value at the end of combat.
+         PermanentCardDamage : In other games (e.g., Hearthstone), health damage persists.
+         You are asked to implement classes TemporaryCardDamageGame  and PermanentCardDamageGame  that would allow us to simulate combat between creatures.
+         
+         To help you on your journey, the CardGame class has a template method called combat() which calls the implementor method hit() that needs to appear within both of the derived game classes.
+         
+         Some examples:
+         
+         With temporary damage, creatures 1/2 and 1/3 can never kill one another. With permanent damage, second creature will win after 2 rounds of combat.
+         With either temporary or permanent damage, two 2/2 creatures kill one another.
+        */
+        
+        class Creature : Equatable
+        {
+            static func == (lhs: TemplateMethod.Test.Creature, rhs: TemplateMethod.Test.Creature) -> Bool {
+                return lhs.id == rhs.id
+            }
+            
+            public var attack, health: Int
+            public var id = 0
+            init(_ attack: Int, _ health: Int)
+            {
+                self.attack = attack
+                self.health = health
+            }
+        }
+        
+        class CardGame : CustomStringConvertible
+        {
+            internal enum GameState {
+                case inCombat
+                case winner
+                case draw
+            }
+            
+            var creatures: [Creature]
+            
+            var description: String {
+                guard let winner = winningCreature else {
+                    return "It was a draw"
+                }
+                return "Winning Creature: \(winner.id)"
+            }
+            
+            internal var winningCreature: Creature?
+            internal var haveWinner = false
+            internal var currentAttacker: Creature
+            internal var gameState : GameState = .inCombat
+            
+            init(_ creatures: [Creature])
+            {
+                self.creatures = creatures
+                // Set creature id
+                for i in 0..<creatures.count {
+                    creatures[i].id = i
+                }
+                currentAttacker = creatures.first!
+            }
+            
+            // the arguments creature1 and creature2 are indices in the 'creatures array'
+            //
+            // method returns the index of the creature that won the fight
+            // returns -1 if there is no clear winner (both alive or both dead)
+            func combat(_ creature1: Int, _ creature2: Int) -> Int
+            {
+                // implement this template method
+                // use hit() for one creature hitting another
+                
+                /*
+                 States:
+                 Fighting -> Neither A nor B health == 0
+                 A kills B / B kills A
+                 A & B Dead
+                */
+                var reps = 0
+                let maxReps = 10
+                while reps != maxReps || !haveWinner  {
+                    takeTurn(creature1, creature2)
+                    reps += 1
+                }
+                switch gameState {
+                case .inCombat,.draw:
+//                    print("Draw: Creature 1 and 2")
+                    return -1
+                case .winner:
+//                    let winningIdx = creatures.index(of: winningCreature!)!
+                    return winningCreature!.id
+                }
+                
+//                if c1.health <= 0 {
+//                    return creature2
+//                } else if c2.health <= 0 {
+//                    return creature1
+//                } else { return -1 }
+                
+            }
+            
+            internal func hit(_ attacker: Creature, _ other: Creature)
+            {
+                precondition(false, "this method needs to be overridden")
+            }
+            
+            internal func takeTurn(_ creature1: Int, _ creature2: Int) {
+                let c1 = creatures[creature1]
+                let c2 = creatures[creature2]
+                hit(c1, c2)
+                hit(c2, c1)
+            }
+        }
+        
+        class TemporaryCardDamageGame : CardGame
+        {
+            override func hit(_ attacker: Creature, _ other: Creature)
+            {
+                // todo
+                let maxDamage = other.health
+                other.health -= attacker.attack
+                if other.health <= 0 {
+                    haveWinner = true
+                    winningCreature = attacker
+                    gameState = .winner
+                    return
+                }
+                other.health = maxDamage
+            }
+        }
+        
+        class PermanentCardDamage : CardGame
+        {
+            override func hit(_ attacker: Creature, _ other: Creature)
+            {
+                // todo
+                other.health -= attacker.attack
+                if other.health <= 0 {
+                    haveWinner = true
+                    winningCreature = attacker
+                    gameState = .winner
+                }
+            }
+        }
+        
+        static func main() {
+            /*
+             With temporary damage, creatures 1/2 and 1/3 can never kill one another. With permanent damage, second creature will win after 2 rounds of combat.
+             With either temporary or permanent damage, two 2/2 creatures kill one another.
+            */
+            
+            // 1/3 Creature
+//            let C1_3 = Creature(1, 3)
+//            // 1/2 Creature
+//            let C1_2 = Creature(1,2)
+//            let cg = TemporaryCardDamageGame([C1_3,C1_2])
+//            cg.combat(0, 1)
+//            // 2/2 Creature
+//            let C2_2 = Creature(2,2)
+//            // 2/2 Creature
+//            let C2_2_Two = Creature(2,2)
+//            let cg2 = PermanentCardDamage([C2_2,C2_2_Two])
+//            cg2.combat(0, 1)
+////            print(cg)
+//            print(cg2)
+        }
+    }
+}
+
+//TemplateMethod.main()
+//TemplateMethod.Test.main()
+// ***** END TEMPLATE METHOD ******
+
+// ******** VISITOR ********
+
+// DEFINITION: A pattern where a component (visitor) is allowed to traverse the entire inheritance hierarchy. Implemented by propogating a single visit() method throughout the entire hierarchy.
+protocol Expression {
+    func print(_ buffer: inout String)
+}
+struct Visitor {
+    
+    struct Intrusive {
+        class DoubleExpression : Expression {
+            private var value: Double
+            
+            init(_ value: Double) {
+                self.value = value
+            }
+            
+            func print(_ buffer: inout String) {
+                buffer.append(String(value))
+            }
+        }
+        
+        class AdditionExpression : Expression {
+            private var left, right: Expression
+            init(_ left: Expression, _ right: Expression) {
+                self.left = left
+                self.right = right
+            }
+            
+            func print(_ buffer: inout String) {
+                buffer.append("(")
+                left.print(&buffer)
+                buffer.append("+")
+                right.print(&buffer)
+                buffer.append(")")
+            }
+        }
+    }
+    
+    struct NonIntrusive {
+        class DoubleExpression : NonIntrusiveExpression {
+            let value: Double
+            
+            init(_ value: Double) {
+                self.value = value
+            }
+            
+            func print(_ buffer: inout String) {
+                buffer.append(String(value))
+            }
+            
+            func accept(_ visitor: ExpressionVisitor) {
+                visitor.visit(self) // double-dispatch
+            }
+        }
+        
+        class AdditionExpression : NonIntrusiveExpression {
+            let left, right: NonIntrusiveExpression
+            init(_ left: NonIntrusiveExpression, _ right: NonIntrusiveExpression) {
+                self.left = left
+                self.right = right
+            }
+            
+            func accept(_ visitor: ExpressionVisitor) {
+                visitor.visit(self) // double-dispatch
+            }
+        }
+        
+        class ExpressionPrinter : ExpressionVisitor, CustomStringConvertible {
+            private var buffer = ""
+            
+            var description: String { return buffer }
+            func visit(_ de: Visitor.NonIntrusive.DoubleExpression) {
+                buffer.append(String(de.value))
+            }
+            
+            func visit(_ ae: Visitor.NonIntrusive.AdditionExpression) {
+                buffer.append("(")
+                ae.left.accept(self)
+                buffer.append("+")
+                ae.right.accept(self)
+                buffer.append(")")
+            }
+        }
+        
+        class ExpressionCalculator: ExpressionVisitor {
+            var result = 0.0
+            
+            func visit(_ de: Visitor.NonIntrusive.DoubleExpression) {
+                result = de.value
+            }
+            
+            func visit(_ ae: Visitor.NonIntrusive.AdditionExpression) {
+                ae.left.accept(self)
+                let a = result
+                ae.right.accept(self)
+                let b = result
+                result = a + b
+            }
+        }
+        
+        static func main() {
+            let e = NonIntrusive.AdditionExpression(NonIntrusive.DoubleExpression(1), NonIntrusive.AdditionExpression(NonIntrusive.DoubleExpression(2),NonIntrusive.DoubleExpression(3)))
+            let ep = ExpressionPrinter()
+            ep.visit(e)
+            let calc = NonIntrusive.ExpressionCalculator()
+            calc.visit(e)
+            print("\(ep) = \(calc.result)")
+        }
+    }
+    
+    static func main() {
+        // 1 + (2+3)
+//        let e = Intrusive.AdditionExpression(Intrusive.DoubleExpression(1), Intrusive.AdditionExpression(Intrusive.DoubleExpression(2),Intrusive.DoubleExpression(3)))
+//        var s = ""
+//        e.print(&s)
+//        print(s)
+    }
+    
+    // --- TEST ---
+    
+    struct Test {
+        /*
+         Visitor Coding Exercise
+         You are asked to implement a double-dispatch visitor called ExpressionPrinter  for printing different mathematical expressions. The range of expressions covers addition and multiplication - please put round brackets around addition operations! Also, please avoid any blank spaces in output.
+         
+         Here's the kind of unit test that will be applied to your code
+         
+         let simple = AdditionExpression(
+         Value(2), Value(3)
+         )
+         let ep = ExpressionPrinter()
+         ep.accept(simple)
+         XCTAssertEqual("(2+3)", ep.description)
+        */
+        
+        class Value : Test_Expression
+        {
+            
+            let value: Int
+            init(_ value: Int)
+            {
+                self.value = value
+            }
+            func visit(_ ev: Test_ExpressionVisitor)
+            {
+                // todo
+                ev.accept(self)
+            }
+        }
+        
+        class AdditionExpression : Test_Expression
+        {
+            
+            let lhs, rhs: Test_Expression
+            init(_ lhs: Test_Expression, _ rhs: Test_Expression)
+            {
+                self.lhs = lhs
+                self.rhs = rhs
+            }
+            func visit(_ ev: Test_ExpressionVisitor)
+            {
+                // todo
+                ev.accept(self)
+            }
+        }
+        
+        class MultiplicationExpression : Test_Expression
+        {
+            
+            let lhs, rhs: Test_Expression
+            init(_ lhs: Test_Expression, _ rhs: Test_Expression)
+            {
+                self.lhs = lhs
+                self.rhs = rhs
+            }
+            func visit(_ ev: Test_ExpressionVisitor)
+            {
+                // todo
+                ev.accept(self)
+            }
+        }
+        
+        class ExpressionPrinter :
+            Test_ExpressionVisitor, CustomStringConvertible
+        {
+            // todo
+            private var buffer = ""
+            
+            var description: String { return buffer }
+            
+            func accept(_ visitor: Value) {
+                buffer.append(String(visitor.value))
+            }
+            
+            func accept(_ visitor: MultiplicationExpression) {
+                visitor.lhs.visit(self)
+                buffer.append("*")
+                visitor.rhs.visit(self)
+            }
+            
+            func accept(_ visitor: AdditionExpression) {
+                buffer.append("(")
+                visitor.lhs.visit(self)
+                buffer.append("+")
+                visitor.rhs.visit(self)
+                buffer.append(")")
+            }
+        }
+        
+        static func main() {
+            let simple = AdditionExpression(
+                Value(2), Value(3)
+            )
+            let ep = ExpressionPrinter()
+            ep.accept(simple)
+            print(ep.description)
+            print("(2+3)" == ep.description)
+        }
+    }
+}
+    
+// --- Test ---
+protocol Test_ExpressionVisitor
+{
+    // todo
+    func accept(_ visitor: Visitor.Test.AdditionExpression)
+    func accept(_ visitor: Visitor.Test.MultiplicationExpression)
+    func accept(_ visitor: Visitor.Test.Value)
+}
+protocol Test_Expression
+{
+//    func visit(_ me: Visitor.Test.MultiplicationExpression)
+    func visit(_ ev: Test_ExpressionVisitor)
+}
+    
+// --- End Test ---
+
+protocol ExpressionVisitor {
+    func visit(_ de: Visitor.NonIntrusive.DoubleExpression)
+    func visit(_ ae: Visitor.NonIntrusive.AdditionExpression)
+}
+protocol NonIntrusiveExpression {
+    func accept(_ visitor: ExpressionVisitor)
+}
+
+//Visitor.NonIntrusive.main()
+Visitor.Test.main()
+
+// ****** END VISITOR ********
