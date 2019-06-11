@@ -5,11 +5,11 @@ import Foundation
 
 // DEFINITION: An observer is an object that wishes to be informed about events happening in the system. The entity generating the events is an 'observable'
 
-protocol Observer_Invocable : class {
+protocol Invokable : class {
     func invoke(_ data: Any)
 }
 
-protocol Observer_Disposable {
+protocol Disposable {
     func dispose()
 }
 
@@ -47,46 +47,6 @@ struct Observer {
     
     static func main() {
         let _ = Demo()
-    }
-    
-    class Event<T> {
-        typealias EventHandler = (T) -> ()
-        var eventHandlers = [Observer_Invocable]()
-        
-        func raise(_ data: T) {
-            for handler in eventHandlers {
-                handler.invoke(data)
-            }
-        }
-        
-        func addHandler<U: AnyObject>(
-            target: U,
-            handler: @escaping (U) -> EventHandler) -> Observer_Disposable {
-            let subscription = Subscription(target: target, handler: handler, event: self)
-            eventHandlers.append(subscription)
-            return subscription
-        }
-    }
-    
-    class Subscription<T: AnyObject, U> : Observer_Invocable, Observer_Disposable {
-        weak var target: T?
-        let handler: (T) -> (U) -> ()
-        let event: Event<U>
-        
-        init(target: T?, handler: @escaping (T) -> (U) -> (), event: Event<U>) {
-            self.target = target; self.event = event; self.handler = handler
-        }
-        
-        func invoke(_ data: Any) {
-            if let t = target {
-                handler(t)(data as! U)
-            }
-        }
-        
-        func dispose() {
-            event.eventHandlers = event.eventHandlers.filter
-                { $0 as AnyObject? !== self }
-        }
     }
     
     // --- Example 2 ---
@@ -217,7 +177,7 @@ struct Observer {
     }
     
     // --- TEST ---
-    // INCOMPLETE!!!
+    
     struct Test {
         
         /*
@@ -232,68 +192,27 @@ struct Observer {
          The Rat class' attack property is strictly defined as var attack = 1 , i.e. it doesn't have a custom getter or setter.
         */
         
-        class Event<T> {
-            typealias EventHandler = (T) -> ()
-            var eventHandlers = [Observer_Invocable]()
-            
-            func raise(_ data: T) {
-                for handler in eventHandlers {
-                    handler.invoke(data)
-                }
-            }
-            
-            func addHandler<U: AnyObject>(
-                target: U,
-                handler: @escaping (U) -> EventHandler) -> Observer_Disposable {
-                let subscription = Subscription(target: target, handler: handler, event: self)
-                eventHandlers.append(subscription)
-                return subscription
-            }
-        }
-        
-        class Subscription<T: AnyObject, U> : Observer_Invocable, Observer_Disposable {
-            weak var target: T?
-            let handler: (T) -> (U) -> ()
-            let event: Event<U>
-            
-            init(target: T?, handler: @escaping (T) -> (U) -> (), event: Event<U>) {
-                self.target = target; self.event = event; self.handler = handler
-            }
-            
-            func invoke(_ data: Any) {
-                if let t = target {
-                    handler(t)(data as! U)
-                }
-            }
-            
-            func dispose() {
-                event.eventHandlers = event.eventHandlers.filter
-                    { $0 as AnyObject? !== self }
-            }
-        }
-        
         class Game
         {
             // todo - Will likely need a method/notification to fire whenever a new Rat instance is created, to update RatAttackModifier packCount
             
             func ratJoinedPack(_ rat: Rat) {
-                // Pass in rat as variable, and
-                // Set listener for Rat so when a new rat joins previous Rat(s) are notified
-                // Set listener for Rat to respond when other rats announce packCount
-                // Fire Notification 'New Rat has joined"
+                // Set handler to appropriately update attack of all Rats in Game
+                // Fire RAM class method to update ratPackHash
                 RatAttackModifier.ratPackChangedAttack.addHandler(target: self, handler: Game.updatePackAttack)
                 RatAttackModifier.addRatToPack(rat)
             }
             
             func ratLeftPack(_ rat: Rat) {
+                // Set handler to appropriately update attack of all Rats in Game
+                // Fire RAM class method to update ratPackHash
                 RatAttackModifier.ratWasKilled.addHandler(target: self, handler: Game.resetKilledRat)
                 RatAttackModifier.removeRatFromPack(rat)
             }
             
-            func updatePackAttack(_ attackValue: Int) {
-                // Pass in pack count as Int
-                // Fire Notification
-                RatAttackModifier.updatePackAttack(attackValue)
+            func updatePackAttack(args: (Rat,Int)) {
+                // Pass along tuple with Rat instance & Int representing packCount for said Rat
+                RatAttackModifier.updatePackAttack(args.0,args.1)
             }
             
             func resetKilledRat(rat: Rat) {
@@ -311,7 +230,9 @@ struct Observer {
              Publishes events to Game object when rats enter/leave the Game
             */
             private let game: Game
-            var attack = 1
+            private let baseAttack = 1
+            var attack: Int
+            var gameID = 0
             var id = 0
             
             var description: String {
@@ -323,66 +244,74 @@ struct Observer {
             init(_ game: Game)
             {
                 /*
-                 Inform Game existence of new Rat, and subscribe to RAM events
+                 Set relevant variables and inform Game of existence of new Rat
                 */
+                self.attack = baseAttack
                 self.game = game
+                self.gameID = unsafeBitCast(game, to: Int.self) // NOTE: Powerful new method learned
                 self.game.ratJoinedPack(self)
             }
             
             func kill() {
                 /*
-                 Inform Game of desistance of specific Rat, and unsubscribe to RAM events?
+                 Inform Game of desistance of specific Rat
                 */
                 game.ratLeftPack(self)
             }
-            
+            // TODO: Update to use dispose() method of Disposable protocol
             func resetAttack() {
-                attack = 1
+                attack = baseAttack
             }
         }
         
         /*
-         Class with static reference to Array of current Rats in Game, and tracks count
+         Class with static reference to Hash of current Rat-Arrays--representing current Rats in play, indexed by Rat-instance gameIDs
          Fires events to notify member rats to update attack values
         */
-        class RatAttackModifier : NSObject {
-            private static var ratPack = [Rat]()
-            private static var packCount : Int {
-                /*
-                 1. Listens for updates from Game as new Rat created, and increases packCount
-                 2. Triggers 'packCountNotification' back to the Game
-                 3. value will increase
+        class RatAttackModifier {
+            private static var ratPackHash = Dictionary<Int,Array<Rat>>()
 
-                 */
-                return ratPack.count
-            }
-
-            static let ratPackChangedAttack = Event<Int>()
+            static let ratPackChangedAttack = Event<(Rat,Int)>()
             static let ratWasKilled = Event<Rat>()
-//            static let propertyChanging = Event<(String, Any, RefBool)>()
 
             static func addRatToPack(_ rat: Rat) {
+                var ratPack = RatAttackModifier.getRatPack(rat)
                 rat.id = ratPack.count
-                self.ratPack.append(rat)
-                ratPackChangedAttack.raise(packCount)
+                ratPack.append(rat)
+                // Update ratPackHash
+                RatAttackModifier.ratPackHash[rat.gameID] = ratPack
+                ratPackChangedAttack.raise((rat,ratPack.count))
             }
 
             static func removeRatFromPack(_ rat: Rat) {
-                self.ratPack.remove(at: ratPack.index(of: rat) ?? 0)
+                var ratPack = RatAttackModifier.getRatPack(rat)
+                ratPack.remove(at: ratPack.firstIndex(of: rat) ?? 0)
                 ratWasKilled.raise(rat)
-                ratPackChangedAttack.raise(packCount)
+                ratPackChangedAttack.raise((rat,ratPack.count))
+            }
+            
+            static func getCountForRatPack(_ rat: Rat) -> Int {
+                return RatAttackModifier.getRatPack(rat).count
             }
 
-            static func updatePackAttack(_ value: Int) {
+            static func updatePackAttack(_ rat: Rat, _ value: Int) {
+                let gameID = rat.gameID
+                let ratPack = RatAttackModifier.getRatPack(rat)
                 for rat in ratPack {
                     rat.attack = value
                 }
+                RatAttackModifier.ratPackHash[gameID] = ratPack
+            }
+            
+            static func getRatPack(_ rat: Rat) -> [Rat] {
+                guard let pack = RatAttackModifier.ratPackHash[rat.gameID] else { return [Rat]() }
+                return pack
             }
         }
         
         static func main() {
             /*
-             As new rat instances are created, each individual rat's attack value should increase to match total rat instances (packCount), included the newest rat instance created
+             As new rat instances are created, each Rat instance within a particular Game instance, should increase attack value to match total Rat instances, including the newest rat instance created
             */
             let g = Game()
             let r1 = Rat(g)
@@ -391,11 +320,52 @@ struct Observer {
             print("Rat1: \(r1) after Rat2")
             print("Rat2: \(r2)")
             let g2 = Game()
-            let r3 = Rat(g2) // FAILURE: No accounting for a separately initialized Game -- can't do g == g2
-            print("Before Kill -- Rat3: \(r3)\nRat2: \(r2)\nRat1: \(r1)")
+            let r3 = Rat(g2)
+            print("Rat3: \(r3)")
             r1.kill()
-            print("After Kill -- Rat3: \(r3)\nRat2: \(r2)\nRat1: \(r1)")
+            let r4 = Rat(g2)
+            print("After Kill: Rat4: \(r4)\nRat3: \(r3)\nRat2: \(r2)\nRat1: \(r1)")
         }
+    }
+}
+
+class Event<T> {
+    typealias EventHandler = (T) -> ()
+    var eventHandlers = [Invokable]()
+    
+    func raise(_ data: T) {
+        for handler in eventHandlers {
+            handler.invoke(data)
+        }
+    }
+    
+    func addHandler<U: AnyObject>(
+        target: U,
+        handler: @escaping (U) -> EventHandler) -> Disposable {
+        let subscription = Subscription(target: target, handler: handler, event: self)
+        eventHandlers.append(subscription)
+        return subscription
+    }
+}
+
+class Subscription<T: AnyObject, U> : Invokable, Disposable {
+    weak var target: T?
+    let handler: (T) -> (U) -> ()
+    let event: Event<U>
+    
+    init(target: T?, handler: @escaping (T) -> (U) -> (), event: Event<U>) {
+        self.target = target; self.event = event; self.handler = handler
+    }
+    
+    func invoke(_ data: Any) {
+        if let t = target {
+            handler(t)(data as! U)
+        }
+    }
+    
+    func dispose() {
+        event.eventHandlers = event.eventHandlers.filter
+            { $0 as AnyObject? !== self }
     }
 }
 
