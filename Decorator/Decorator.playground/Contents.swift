@@ -223,8 +223,18 @@ struct Decorator {
 
     // --- TEST ---
     // INCOMPLETE!!!
+    
+    /*
+     Decorator Coding Exercise
+     The following code scenario shows a Dragon  which is both a Bird  and a Lizard .
+     
+     Complete the Dragon 's interface (there's no need to extract protocols out of either Bird  or Lizard ).
+     
+     Take special care when implementing the Age  property!
+     
+    */
     struct Test {
-        class DecTestBird
+        class Bird
         {
             var age = 0
             
@@ -234,7 +244,7 @@ struct Decorator {
             }
         }
 
-        class DecTestLizard
+        class Lizard
         {
             var age = 0
             
@@ -244,17 +254,36 @@ struct Decorator {
             }
         }
 
-        class DecTestDragon
+        class Dragon
         {
             // todo: reuse bird/lizard functionality here
+            private var birdlike = Bird()
+            private var lizardlike = Lizard()
+            var age = 0
             
-            var age: Int { return 0 /* todo */ }
-            func fly() -> String { return "" /* todo */ }
-            func crawl() -> String { return "" /* todo */ }
+//            var age: Int {
+//                /* todo */
+//
+//
+//                return _age
+//            }
+            func fly() -> String {
+                /* todo */
+                
+                
+                return birdlike.fly()
+            }
+            func crawl() -> String {
+                /* todo */
+                return lizardlike.crawl()
+            }
         }
         
         static func main() {
-            
+            let dragon = Dragon()
+            dragon.age = 20
+            dragon.fly() // Should say "flying"?
+            dragon.crawl() // Should say "too young"?
         }
     }
 }

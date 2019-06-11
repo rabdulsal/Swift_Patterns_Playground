@@ -18,19 +18,6 @@ struct FlyWeight {
         }
     }
     
-    func main() {
-        let user1 = User("John Smith")
-        let user2 = User("Jane Smith")
-        let user3 = User("Jane Doe")
-        let totalChars = user1.charCount + user2.charCount + user3.charCount
-        print("Total number of chars used: \(totalChars)")
-        2
-        let user4 = User2("John Smith")
-        let user5 = User2("Jane Smith")
-        let user6 = User2("Jane Doe")
-        print("Total number of chars used: \(User2.charCount)")
-    }
-    
     class User2 {
         static var string = [String]()
         private var names = [Int]()
@@ -50,6 +37,19 @@ struct FlyWeight {
         static var charCount : Int {
             return string.map{ $0.utf8.count }.reduce(0,+)
         }
+    }
+    
+    static func main1() {
+        let user1 = User("John Smith")
+        let user2 = User("Jane Smith")
+        let user3 = User("Jane Doe")
+        let totalChars = user1.charCount + user2.charCount + user3.charCount
+        print("Total number of chars used: \(totalChars)")
+        2
+        let user4 = User2("John Smith")
+        let user5 = User2("Jane Smith")
+        let user6 = User2("Jane Doe")
+        print("Total number of chars used: \(User2.charCount)")
     }
     
     // ~~~~ Example 2
@@ -76,16 +76,6 @@ struct FlyWeight {
             }
             return s
         }
-    }
-    
-    func main2() {
-        let ft = FormattedText("This is a brave new world")
-        ft.capitalize(10,15)
-        print(ft)
-        
-        let bft = BetterFormattedText("This is a brave new world")
-        bft.getRange(10, 15).capitalize = true
-        print(bft)
     }
     
     class BetterFormattedText : CustomStringConvertible {
@@ -133,40 +123,65 @@ struct FlyWeight {
         
     }
     
+    static func main2() {
+        let ft = FormattedText("This is a brave new world")
+        ft.capitalize(10,15)
+        print(ft)
+        
+        let bft = BetterFormattedText("This is a brave new world")
+        bft.getRange(10, 15).capitalize = true
+        print(bft)
+    }
+    
     // --- TEST ---
-    // INCOMPLETE!!!
+    /*
+     Flyweight Coding Exercise
+     You are given a class called Sentence , which takes a string such as "hello world". You need to provide an interface such that the subscript of the class returns a WordToken  which can be used to capitalize a particular word in the sentence.
+     
+     Typical use would be something like:
+     
+     var sentence = Sentence("hello world")
+     sentence[1].capitalize = true
+     print(sentence); // writes "hello WORLD"
+    */
     struct Test {
         class Sentence : CustomStringConvertible
         {
-//            init(_ plainText: String)
-//            {
-//                // todo
-//            }
-//
-//            subscript(index: Int) -> WordToken
-//            {
-//                // todo
-//            }
+            private var buffer: String
+            private var formattingBuffer = WordToken()
+            init(_ plainText: String)
+            {
+                self.buffer = plainText
+            }
+
+            subscript(index: Int) -> WordToken
+            {
+                let desiredPhrase = self.buffer.components(separatedBy: .whitespaces)[index]
+                formattingBuffer = WordToken(desiredPhrase)
+                return formattingBuffer
+            }
             
             var description: String
             {
-                // todo
-                return ""
+                let stringToFormat = formattingBuffer.targetText
+                let formattedString = formattingBuffer.capitalize ? formattingBuffer.targetText.uppercased() : stringToFormat
+                return buffer.replacingOccurrences(of: stringToFormat, with: formattedString)
             }
-//
-//            class WordToken
-//            {
-//                var capitalize: Bool = false
-//                // todo
-//            }
+            class WordToken
+            {
+                var capitalize: Bool = false
+                var targetText: String = ""
+                init(){}
+                init(_ text: String) {
+                    targetText = text
+                }
+            }
         }
         
-        
-        
         static func main() {
-//            let sentence = Sentence("hello world")
-//            sentence[1].capitalize = true
-//            print(sentence) // writes "hello WORLD"
+            let sentence = Sentence("hello world")
+            sentence[1].capitalize = true
+            print("\(sentence)" == "hello WORLD") // writes "hello WORLD"
         }
     }
     
@@ -183,8 +198,8 @@ extension String {
     }
 }
 
-//FlyWeight().main()
-FlyWeight().main2()
+//FlyWeight.main()
+//FlyWeight.main2()
 FlyWeight.Test.main()
 
 // ******** END FLYWEIGHT ***********

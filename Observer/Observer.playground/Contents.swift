@@ -190,6 +190,10 @@ struct Observer {
          
          The Game class cannot contain properties. It can only contain events and methods.
          The Rat class' attack property is strictly defined as var attack = 1 , i.e. it doesn't have a custom getter or setter.
+         
+         ADDED CHALLENGE:
+         - Consider giving RatAttackModifier a parent CreatureModifier class which is Disposable, that initializes Games and Events (+Queries?), and can reset Rat attacks using .dispose()
+         - This approach *may also obviate the need for RAM needing a Dictionary to bucket packs by gameID, as the CreatureModifier might be able to naturally scope Events
         */
         
         class Game
@@ -248,7 +252,7 @@ struct Observer {
                 */
                 self.attack = baseAttack
                 self.game = game
-                self.gameID = unsafeBitCast(game, to: Int.self) // NOTE: Powerful new method learned
+                self.gameID = unsafeBitCast(game, to: Int.self) // NOTE: New method learned -- sets gameID to memory address of Game instance
                 self.game.ratJoinedPack(self)
             }
             
@@ -290,7 +294,7 @@ struct Observer {
                 ratPackChangedAttack.raise((rat,ratPack.count))
             }
             
-            static func getCountForRatPack(_ rat: Rat) -> Int {
+            private static func getCountForRatPack(_ rat: Rat) -> Int {
                 return RatAttackModifier.getRatPack(rat).count
             }
 
@@ -300,10 +304,11 @@ struct Observer {
                 for rat in ratPack {
                     rat.attack = value
                 }
+                // Ensure ratPackHash is updated
                 RatAttackModifier.ratPackHash[gameID] = ratPack
             }
             
-            static func getRatPack(_ rat: Rat) -> [Rat] {
+            private static func getRatPack(_ rat: Rat) -> [Rat] {
                 guard let pack = RatAttackModifier.ratPackHash[rat.gameID] else { return [Rat]() }
                 return pack
             }

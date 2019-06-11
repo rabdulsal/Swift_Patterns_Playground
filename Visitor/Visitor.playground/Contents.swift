@@ -918,7 +918,7 @@ extension String {
 
 //FlyWeight().main()
 FlyWeight().main2()
-FlyWeight.Test.main()
+//FlyWeight.Test.main()
 
 // ******** END FLYWEIGHT ***********
 
