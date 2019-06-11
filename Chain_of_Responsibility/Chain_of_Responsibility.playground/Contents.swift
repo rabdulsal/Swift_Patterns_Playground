@@ -231,6 +231,7 @@ struct ChainOfResponsibility {
                 super.init(game, 1, 1, .goblin)
                 // Add Defense Buff
                 IncreaseDefenseModifier(self.game, self)
+                IncreaseAttackModifier(self.game, self)
             }
         }
         
@@ -243,13 +244,6 @@ struct ChainOfResponsibility {
                 self.creatureType = .goblinKing
                 self._attack = 3
                 self._defense = 3
-                
-                for creature in game.creatures {
-                    // Add Attack modifiers
-                    if creature.creatureType == .goblin {
-                        IncreaseAttackModifier(game, creature)
-                    }
-                }
             }
         }
         
@@ -286,9 +280,10 @@ struct ChainOfResponsibility {
         
         class IncreaseAttackModifier: CreatureModifier {
             override func handle(_ q: Query) {
-                if q.creatureName == creature.creatureType.rawValue && q.whatToQuery
+                let kingCount = self.game.creatures.filter { $0.creatureType == .goblinKing }.count
+                if q.creatureName == Creature.CreatureType.goblin.rawValue && q.whatToQuery
                     == .attack {
-                    q.value += 1
+                    q.value = kingCount+1
                 }
             }
         }
@@ -300,7 +295,7 @@ struct ChainOfResponsibility {
                     q.creatureName == Creature.CreatureType.goblin.rawValue ||
                     q.creatureName == Creature.CreatureType.goblinKing.rawValue
                     ) && q.whatToQuery  == .defense {
-                    q.value += defenseMultiplier
+                    q.value = defenseMultiplier
                 }
             }
         }
@@ -309,14 +304,31 @@ struct ChainOfResponsibility {
         
         static func main() {
             let game = Game()
+            let goblinK2 = GoblinKing(game: game)
+            game.creatures.append(goblinK2)
             let goblin = Goblin(game: game)
             game.creatures.append(goblin)
             
             let goblin2 = Goblin(game: game)
             game.creatures.append(goblin2)
             
-            print("Goblin attack \(1 == goblin.attack ? "MATCHES" : "DOESN'T MATCH") -- \(goblin.attack)") // "Expecting goblin attack to be = 1"
-            print("Goblin defense \(2 == goblin.defense ? "MATCHES" : "DOESN'T MATCH") -- \(goblin.defense)") // "Expecting goblin defense to be = 2 (1 baseline, +1 from othe goblin"
+            let goblin3 = Goblin(game: game)
+            game.creatures.append(goblin3)
+            
+            print("Goblin3 attack: \(goblin3.attack) defense: \(goblin3.defense)")
+//            for goblin in game.creatures {
+//                print("Goblin name: \(goblin.creatureType.rawValue), Attack: \(goblin.attack), Defense: \(goblin.defense)") // "Expecting all to be = 1/3"
+//            }
+//
+//            let goblinK = GoblinKing(game: game)
+//            game.creatures.append(goblinK)
+//
+//            for goblin in game.creatures {
+//                print("Goblin name: \(goblin.creatureType.rawValue), Attack: \(goblin.attack), Defense: \(goblin.defense)") // "Expecting all to be = 1/3"
+//            }
+//            print("Creatures count: \(game.creatures.count)")
+//            print("Goblin attack \(1 == goblin.attack ? "MATCHES" : "DOESN'T MATCH") -- \(goblin.attack)") // "Expecting goblin attack to be = 1"
+//            print("Goblin defense \(2 == goblin.defense ? "MATCHES" : "DOESN'T MATCH") -- \(goblin.defense)") // "Expecting goblin defense to be = 2 (1 baseline, +1 from othe goblin"
         }
     }
 }// --- Chain of Responsibility Scope ---
