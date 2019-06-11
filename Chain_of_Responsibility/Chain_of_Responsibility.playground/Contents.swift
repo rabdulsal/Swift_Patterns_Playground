@@ -141,6 +141,7 @@ struct ChainOfResponsibility {
                 if q.creatureName == creature.name && q.whatToQuery
                  == .attack {
                     q.value *= 2
+                    print("Attack Value: \(q.value)")
                 }
             }
         }
@@ -150,6 +151,7 @@ struct ChainOfResponsibility {
                 if q.creatureName == creature.name && q.whatToQuery
                     == .defense {
                     q.value += 2
+                    print("Defense Value: \(q.value)")
                 }
             }
         }
@@ -174,7 +176,7 @@ struct ChainOfResponsibility {
     // --- TEST ---
     
     struct Test {
-        // INCOMPLETE!!
+        
         /*
          
          Chain of Responsibility Coding Exercise
@@ -190,6 +192,11 @@ struct ChainOfResponsibility {
          Suppose you have 3 ordinary goblins in play. Each one is a 1/3 (1/1 + 0/2 defense bonus).
          A goblin king comes into play. Now every ordinary goblin is a 2/4 (1/1 + 0/3 defense bonus from each other + 1/0 from goblin king)
          The state of all the goblins has to be consistent as goblins are added to the game.
+         
+         ADDED CHALLENGE:
+         
+         1. Refactor control flow such that Attack/Defense modifiers are dynamically added/removed along with creatures in the game
+         2. Add functionality for getting cursed by Witch where Attack & Defense modifiers are nerfed
 
         */
         
@@ -224,14 +231,21 @@ struct ChainOfResponsibility {
         
         class Goblin : Creature
         {
-            // todo
+            var modifiers = [CreatureModifier]()
             init(game: Game)
             {
-                // todo
                 super.init(game, 1, 1, .goblin)
-                // Add Defense Buff
-                IncreaseDefenseModifier(self.game, self)
-                IncreaseAttackModifier(self.game, self)
+                self.updateModifiers()
+                
+            }
+            
+            func updateModifiers() {
+                if creatureType == .goblin {
+                    self.modifiers = [
+                        IncreaseDefenseModifier(self.game, self),
+                        IncreaseAttackModifier(self.game, self)
+                    ]
+                }
             }
         }
         
@@ -244,6 +258,12 @@ struct ChainOfResponsibility {
                 self.creatureType = .goblinKing
                 self._attack = 3
                 self._defense = 3
+            }
+            
+            override func updateModifiers() {
+                super.updateModifiers()
+                let attackModifier = self.modifiers.filter { type(of: $0) == IncreaseAttackModifier.self }.first
+                attackModifier?.dispose()
             }
         }
         
@@ -283,7 +303,8 @@ struct ChainOfResponsibility {
                 let kingCount = self.game.creatures.filter { $0.creatureType == .goblinKing }.count
                 if q.creatureName == Creature.CreatureType.goblin.rawValue && q.whatToQuery
                     == .attack {
-                    q.value = kingCount+1
+                    let attackMultiplier = creature._attack + kingCount
+                    q.value = attackMultiplier
                 }
             }
         }
@@ -316,19 +337,16 @@ struct ChainOfResponsibility {
             game.creatures.append(goblin3)
             
             print("Goblin3 attack: \(goblin3.attack) defense: \(goblin3.defense)")
-//            for goblin in game.creatures {
-//                print("Goblin name: \(goblin.creatureType.rawValue), Attack: \(goblin.attack), Defense: \(goblin.defense)") // "Expecting all to be = 1/3"
-//            }
-//
-//            let goblinK = GoblinKing(game: game)
-//            game.creatures.append(goblinK)
-//
-//            for goblin in game.creatures {
-//                print("Goblin name: \(goblin.creatureType.rawValue), Attack: \(goblin.attack), Defense: \(goblin.defense)") // "Expecting all to be = 1/3"
-//            }
-//            print("Creatures count: \(game.creatures.count)")
-//            print("Goblin attack \(1 == goblin.attack ? "MATCHES" : "DOESN'T MATCH") -- \(goblin.attack)") // "Expecting goblin attack to be = 1"
-//            print("Goblin defense \(2 == goblin.defense ? "MATCHES" : "DOESN'T MATCH") -- \(goblin.defense)") // "Expecting goblin defense to be = 2 (1 baseline, +1 from othe goblin"
+            for goblin in game.creatures {
+                print("Goblin name: \(goblin.creatureType.rawValue), Attack: \(goblin.attack), Defense: \(goblin.defense)")
+            }
+
+            let goblinK = GoblinKing(game: game)
+            game.creatures.append(goblinK)
+
+            for goblin in game.creatures {
+                print("Goblin name: \(goblin.creatureType.rawValue), Attack: \(goblin.attack), Defense: \(goblin.defense)")
+            }
         }
     }
 }// --- Chain of Responsibility Scope ---
@@ -402,4 +420,4 @@ import XCTest
 //ChainOfResponsibility.Broker.main()
 ChainOfResponsibility.Test.main()
 
-// ******** END CHAIN OR RESPONSIBILITY *********
+// ******** END CHAIN OF RESPONSIBILITY *********
