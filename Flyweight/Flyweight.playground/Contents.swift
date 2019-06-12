@@ -154,7 +154,7 @@ struct FlyWeight {
                 self.buffer = plainText
             }
 
-            subscript(index: Int) -> WordToken
+            subscript(index: Int) -> WordToken // Note the use of the 'subscript' to allow for '[]' functionality
             {
                 let desiredPhrase = self.buffer.components(separatedBy: .whitespaces)[index]
                 formattingBuffer = WordToken(desiredPhrase)
@@ -167,6 +167,7 @@ struct FlyWeight {
                 let formattedString = formattingBuffer.capitalize ? formattingBuffer.targetText.uppercased() : stringToFormat
                 return buffer.replacingOccurrences(of: stringToFormat, with: formattedString)
             }
+            
             class WordToken
             {
                 var capitalize: Bool = false
