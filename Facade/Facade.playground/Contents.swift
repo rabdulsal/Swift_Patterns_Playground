@@ -57,6 +57,19 @@ struct Facade {
     }
 
     // --- TEST --- INCOMPLETE!!!
+    
+    /*
+     Façade Coding Exercise
+     A magic square is a square matrix of numbers where the sum in each row, each column, and each of the diagonals is the same.
+     
+     You are given a system of 3 classes that can be used to make a magic square. The classes are:
+     
+     Generator: this class generates a 1-dimensional array of random digits in range 1 to 9.
+     Splitter: this class takes a 2D array and splits it into all possible arrangements of 1D arrays. It gives you the columns, the rows and the two diagonals.
+     Verifier: this class takes a 2D array and verifies that the sum of elements in every subarray is the same.
+     Please implement a Façade class called MagicSquareGenerator  which simply generates the magic square of a given size.
+     
+    */
 
     class Test {
         
@@ -68,6 +81,8 @@ struct Facade {
                 for _ in 1...count
                 {
                     result.append(1 + Int(arc4random_uniform(9)))
+//                    result.append(1 + Int.random(in: 0 ..< 10))
+//                    result.append(1 + random()%9)
                 }
                 return result
             }
@@ -158,6 +173,7 @@ struct Facade {
                 let splitted = splitter.split([generatedArry])
                 let isVerified = verifier.verify(splitted)
                 return isVerified ? splitted : [[Int]]()
+//                return splitted
             }
         }
         

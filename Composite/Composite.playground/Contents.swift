@@ -114,34 +114,60 @@ func neuronMain() {
 
 // ------- TEST --------
 // INCOMPLETE!!!
-class SingleValue : Sequence
-{
-    var value = 0
-    
-    init() {}
-    init(_ value: Int)
-    {
-        self.value = value
-    }
-    
-    func makeIterator() -> IndexingIterator<Array<Int>>
-    {
-        return IndexingIterator(_elements: [value])
-    }
-}
 
-class ManyValues : Sequence
-{
-    var values = [Int]()
-    
-    func makeIterator() -> IndexingIterator<Array<Int>>
+/*
+ Composite Coding Exercise
+ Consider the code presented below. The sum()  extension method adds up all the values in a list of Sequence -conforming elements it gets passed. We can have a single value or a set of values, all of them get added up together.
+ 
+ Please complete the implementation of the extension so that sum()  begins to work correctly.
+ 
+ Here is an example of how the extension method might be used:
+ 
+ let singleValue = SingleValue(1)
+ let manyValues = ManyValues()
+ manyValues.add(2)
+ manyValues.add(3)
+ let s = [AnySequence(singleValue), AnySequence(manyValues)].sum() // s = 6
+ 
+ */
+struct Test {
+    class SingleValue : Sequence
     {
-        return IndexingIterator(_elements: values)
+        var value = 0
+        
+        init() {}
+        init(_ value: Int)
+        {
+            self.value = value
+        }
+        
+        func makeIterator() -> IndexingIterator<Array<Int>>
+        {
+            return IndexingIterator(_elements: [value])
+        }
+    }
+
+    class ManyValues : Sequence
+    {
+        var values = [Int]()
+        
+        func makeIterator() -> IndexingIterator<Array<Int>>
+        {
+            return IndexingIterator(_elements: values)
+        }
+        
+        func add(_ value: Int)
+        {
+            values.append(value)
+        }
     }
     
-    func add(_ value: Int)
-    {
-        values.append(value)
+    static func main() {
+        let singleValue = SingleValue()
+        let manyValues = ManyValues()
+        manyValues.add(2)
+        manyValues.add(3)
+        //    let s = [AnySequence(singleValue), AnySequence(manyValues)].sum() // s = 6
     }
 }
 
@@ -157,14 +183,6 @@ extension Sequence where Self.Iterator.Element == Int
     }
 }
 
-func runTestComp() {
-    let singleValue = SingleValue()
-    let manyValues = ManyValues()
-    manyValues.add(2)
-    manyValues.add(3)
-//    let s = [AnySequence(singleValue), AnySequence(manyValues)].sum() // s = 6
-}
-
-//runTestComp()
+//Test.main()
 
 // ******** END COMPOSITE *********
