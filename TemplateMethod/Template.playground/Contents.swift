@@ -101,7 +101,7 @@ struct TemplateMethod {
         
         class Creature : Equatable
         {
-            static func == (lhs: TemplateMethod.Test.Creature, rhs: TemplateMethod.Test.Creature) -> Bool {
+            static func == (lhs: Creature, rhs: Creature) -> Bool {
                 return lhs.id == rhs.id
             }
             
@@ -116,24 +116,22 @@ struct TemplateMethod {
         
         class CardGame : CustomStringConvertible
         {
-            internal enum GameState {
-                case inCombat
-                case winner
-                case draw
+            internal enum GameState : String {
+                case inCombat = "combat"
+                case winner = "winner"
+                case draw = "draw"
             }
-            
+            private var gameId = 0
             var creatures: [Creature]
             
             var description: String {
-                guard let winner = winningCreature else {
-                    return "It was a draw"
-                }
-                return "Winning Creature: \(winner.id)"
+                let winnerId = getWinnerId()
+                return winnerId > -1 ? "Winning Creature: \(winnerId)" : "It was a draw."
             }
             
-            internal var winningCreature: Creature?
+            internal var winningCreature = [Creature]()
             internal var haveWinner = false
-            internal var currentAttacker: Creature
+            internal var currentAttacker: Creature?=nil
             internal var gameState : GameState = .inCombat
             
             init(_ creatures: [Creature])
@@ -160,28 +158,46 @@ struct TemplateMethod {
                  Fighting -> Neither A nor B health == 0
                  A kills B / B kills A
                  A & B Dead
-                */
+                 */
+                self.gameId = unsafeBitCast(self, to: Int.self)
+                print("GameId: \(self.gameId) - Combatants:\n\(creature1): health - \(creatures[creature1].health), \(creature1): attack - \(creatures[creature1].attack)\n \(creature2): health - \(creatures[creature2].health), \(creature2): attack - \(creatures[creature2].attack)")
+                print("Have winner: \(haveWinner), Game State: \(gameState.rawValue)")
                 var reps = 0
                 let maxReps = 10
-                while reps != maxReps || !haveWinner  {
+                while /*reps != maxReps ||*/ !haveWinner  {
                     takeTurn(creature1, creature2)
                     reps += 1
+                    if reps == maxReps && !haveWinner {
+                        gameState = .draw
+                        break
+                    }
                 }
+                print("Turns complete")
                 switch gameState {
                 case .inCombat,.draw:
-//                    print("Draw: Creature 1 and 2")
+                    print("Draw: Creature 1 and 2")
+//                    self.resetGame()
                     return -1
                 case .winner:
-//                    let winningIdx = creatures.index(of: winningCreature!)!
-                    return winningCreature!.id
+                    let winningId = getWinnerId()
+                    print("Winner \(winningId)")
+//                    self.resetGame()
+                    return winningId
                 }
-                
-//                if c1.health <= 0 {
-//                    return creature2
-//                } else if c2.health <= 0 {
-//                    return creature1
-//                } else { return -1 }
-                
+            }
+            
+            private func resetGame() {
+                winningCreature = [Creature]()
+                haveWinner = false
+                currentAttacker = nil
+                gameState = .inCombat
+            }
+            
+            internal func getWinnerId() -> Int {
+                guard let winner = winningCreature.first, winningCreature.count == 1 else {
+                    return -1 // Draw
+                }
+                return winner.id
             }
             
             internal func hit(_ attacker: Creature, _ other: Creature)
@@ -190,10 +206,14 @@ struct TemplateMethod {
             }
             
             internal func takeTurn(_ creature1: Int, _ creature2: Int) {
+                print("Start Turns")
                 let c1 = creatures[creature1]
                 let c2 = creatures[creature2]
                 hit(c1, c2)
                 hit(c2, c1)
+                if winningCreature.count == 2 {
+                    gameState = .draw
+                }
             }
         }
         
@@ -202,11 +222,13 @@ struct TemplateMethod {
             override func hit(_ attacker: Creature, _ other: Creature)
             {
                 // todo
+                print("\(attacker.id) hit \(other.id)")
                 let maxDamage = other.health
                 other.health -= attacker.attack
+                print("\(other.id) health: \(other.health)")
                 if other.health <= 0 {
                     haveWinner = true
-                    winningCreature = attacker
+                    winningCreature.append(attacker)
                     gameState = .winner
                     return
                 }
@@ -219,10 +241,12 @@ struct TemplateMethod {
             override func hit(_ attacker: Creature, _ other: Creature)
             {
                 // todo
+                print("\(attacker.id) hit \(other.id)")
                 other.health -= attacker.attack
+                print("\(other.id) health: \(other.health)")
                 if other.health <= 0 {
                     haveWinner = true
-                    winningCreature = attacker
+                    winningCreature.append(attacker)
                     gameState = .winner
                 }
             }
@@ -234,24 +258,33 @@ struct TemplateMethod {
              With either temporary or permanent damage, two 2/2 creatures kill one another.
             */
             
+            // --- INCOMPLETE NOTE: Must handle case of running Game.combat again w/out re-initializing new Game
+            
             // 1/3 Creature
-//            let C1_3 = Creature(1, 3)
-//            // 1/2 Creature
-//            let C1_2 = Creature(1,2)
-//            let cg = TemporaryCardDamageGame([C1_3,C1_2])
+            let C1_3 = Creature(1, 3)
+            // 1/2 Creature
+            let C1_2 = Creature(1,2)
+            let cg = TemporaryCardDamageGame([C1_3,C1_2])
 //            cg.combat(0, 1)
-//            // 2/2 Creature
-//            let C2_2 = Creature(2,2)
-//            // 2/2 Creature
-//            let C2_2_Two = Creature(2,2)
-//            let cg2 = PermanentCardDamage([C2_2,C2_2_Two])
+            // 2/2 Creature
+            let C2_2 = Creature(2,2)
+            // 2/2 Creature
+            let C2_2_Two = Creature(2,2)
+            let cg2 = PermanentCardDamage([C2_2,C2_2_Two])
 //            cg2.combat(0, 1)
-////            print(cg)
-//            print(cg2)
+//            print(cg)
+            // Failing Case
+            let C0_1 = Creature(1,2)
+            let C1_1 = Creature(2,2)
+            let cg3 = PermanentCardDamage([C0_1,C1_1])
+            cg3.combat(0, 1)
+            cg3.combat(0, 1)
+            print("Winning creature count: \(cg3.winningCreature.count)")
+            print(cg3)
         }
     }
 }
 
 //TemplateMethod.main()
-//TemplateMethod.Test.main()
+TemplateMethod.Test.main()
 // ***** END TEMPLATE METHOD ******
